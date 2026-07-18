@@ -114,13 +114,6 @@
 	// content_name (Meta) / item_name (GA4) — por padrão usa o <title> da
 	// página. Numa página de produto específica, prefira chamar de novo com
 	// o nome certo: trackEvent('ViewContent', { product: 'Nome do Produto' })
-	fbq( 'track', 'ViewContent', {
-		content_name: document.title
-	}, {
-		eventID: viewContentEventId
-	} );
-	window.trackEvent( 'ViewContent', {
-		event_id: viewContentEventId,
-		product: document.title
-	} );
+	fbq( 'track', 'ViewContent', { content_name: document.title }, { eventID: viewContentEventId } );
+	window.trackEvent( 'ViewContent', { event_id: viewContentEventId, product: document.title } );
 } )();
