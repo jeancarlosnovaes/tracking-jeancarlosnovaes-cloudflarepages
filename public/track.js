@@ -103,6 +103,9 @@
 	const pageViewId = generateEventId();
 	const viewContentEventId = generateEventId();
 
+	// Inicializa o pixel do Meta (Facebook) com o ID do pixel
+	fbq( 'init', '1830724191002466' );
+
 	// Dispara PageView automático a cada carregamento
 	fbq( 'track', 'PageView', {}, { eventID: pageViewId } );
 	window.trackEvent( 'PageView', { event_id: pageViewId } );
