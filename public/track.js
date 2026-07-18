@@ -104,25 +104,18 @@
 	const viewContentEventId = generateEventId();
 
 	// Dispara PageView automático a cada carregamento
-	if ( window.fbq )
-	{
-		fbq( 'track', 'PageView', {}, { eventID: pageViewId } );
-	}
+	fbq( 'track', 'PageView', {}, { eventID: pageViewId } );
 	window.trackEvent( 'PageView', { event_id: pageViewId } );
 
 	// Dispara ViewContent também automaticamente. "product" aqui vira
 	// content_name (Meta) / item_name (GA4) — por padrão usa o <title> da
 	// página. Numa página de produto específica, prefira chamar de novo com
 	// o nome certo: trackEvent('ViewContent', { product: 'Nome do Produto' })
-	if ( window.fbq )
-	{
-		fbq( 'track', 'ViewContent', {
-			content_name: document.title
-		}, {
-			eventID: viewContentEventId
-		} );
-	}
-
+	fbq( 'track', 'ViewContent', {
+		content_name: document.title
+	}, {
+		eventID: viewContentEventId
+	} );
 	window.trackEvent( 'ViewContent', {
 		event_id: viewContentEventId,
 		product: document.title
