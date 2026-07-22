@@ -27,38 +27,31 @@ export async function buildMetaEvent(
 	const countryCode = env.DEFAULT_PHONE_COUNTRY_CODE || '55';
 	const userData: Record<string, unknown> = {};
 
-	if ( evt.user.email )
-	{
+	if ( evt.user.email ) {
 		userData.em = [ await sha256Hex( normalizeEmailForMeta( evt.user.email ) ) ];
 	}
-	if ( evt.user.phone )
-	{
+	if ( evt.user.phone ) {
 		userData.ph = [ await sha256Hex( normalizePhoneForMeta( evt.user.phone, countryCode ) ) ];
 	}
-	if ( evt.user.firstName )
-	{
+	if ( evt.user.firstName ) {
 		userData.fn = [ await sha256Hex( normalizeNameForMeta( evt.user.firstName ) ) ];
 	}
-	if ( evt.user.lastName )
-	{
+	if ( evt.user.lastName ) {
 		userData.ln = [ await sha256Hex( normalizeNameForMeta( evt.user.lastName ) ) ];
 	}
 	// external_id ajuda o match quando não há email/telefone (ex: reembolso
 	// sem esses dados no payload) — usamos o ID da transação hasheado
-	if ( evt.user.externalId )
-	{
+	if ( evt.user.externalId ) {
 		userData.external_id = [ await sha256Hex( evt.user.externalId.trim().toLowerCase() ) ];
 	}
 	// Opcionais, mas a Meta recomenda mandar sempre que disponível — ajuda o
 	// match mesmo quando todo o público é do mesmo país
 	if ( evt.user.city ) userData.ct = [ await sha256Hex( normalizeCityForMeta( evt.user.city ) ) ];
 	if ( evt.user.state ) userData.st = [ await sha256Hex( normalizeStateForMeta( evt.user.state ) ) ];
-	if ( evt.user.zip )
-	{
+	if ( evt.user.zip ) {
 		userData.zp = [ await sha256Hex( normalizeZipForMeta( evt.user.zip, evt.user.countryIso ) ) ];
 	}
-	if ( evt.user.countryIso )
-	{
+	if ( evt.user.countryIso ) {
 		userData.country = [ await sha256Hex( normalizeCountryForMeta( evt.user.countryIso ) ) ];
 	}
 	// subscription_id fica no user_data (não é hasheado) — é como a Meta
@@ -76,15 +69,13 @@ export async function buildMetaEvent(
 	if ( evt.commerce?.productId ) customData.content_ids = [ evt.commerce.productId ];
 	if ( evt.commerce?.productName ) customData.content_name = evt.commerce.productName;
 	if ( evt.commerce?.contentCategory ) customData.content_category = evt.commerce.contentCategory;
-	if ( evt.commerce?.productId || evt.commerce?.productName )
-	{
+	if ( evt.commerce?.productId || evt.commerce?.productName ) {
 		const quantity = evt.commerce.quantity ?? 1;
 		customData.content_type = 'product';
 		customData.num_items = quantity;
 		// "contents" é o formato mais completo (id + quantidade + preço
 		// unitário) — a Meta recomenda mandar junto com content_ids, não no lugar
-		if ( evt.commerce.productId )
-		{
+		if ( evt.commerce.productId ) {
 			customData.contents = [
 				{
 					id: evt.commerce.productId,

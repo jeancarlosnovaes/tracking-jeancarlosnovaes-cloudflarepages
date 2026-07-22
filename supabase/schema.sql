@@ -56,6 +56,7 @@ create table if not exists checkout_tracking (
   fbp text,
   fbc text,
   ga_client_id text,
+  external_id text,
   client_ip text,
   user_agent text,
   utm_source text,
@@ -66,6 +67,10 @@ create table if not exists checkout_tracking (
 );
 
 create index if not exists idx_checkout_tracking_code on checkout_tracking(code);
+
+-- Cobre quem já rodou este schema antes de external_id existir — "create
+-- table if not exists" não adiciona coluna numa tabela que já existe.
+alter table checkout_tracking add column if not exists external_id text;
 
 -- Visão comercial simples pro CRM/dashboard: uma linha por transação,
 -- sempre com o status mais recente (upsert por transaction_id a cada

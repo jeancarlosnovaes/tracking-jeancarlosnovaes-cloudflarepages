@@ -6,8 +6,8 @@ import type { Env } from './env';
 // de cada requisição, em vez de um singleton no topo do módulo. Criar o
 // client é uma operação barata (não abre conexão de fato até o primeiro
 // fetch), então não há problema de performance em criar um por requisição.
-export function getSupabase(env: Env) {
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
+export function getSupabase( env: Env ) {
+	return createClient( env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+		auth: { persistSession: false },
+	} );
 }

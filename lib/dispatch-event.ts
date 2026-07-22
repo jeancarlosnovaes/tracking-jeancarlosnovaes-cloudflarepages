@@ -15,42 +15,42 @@ import type { Env } from './env';
 //    schema recomendado da respectiva plataforma.
 // 3. Loga o resultado do disparo na tabela events, pra auditoria/debug.
 export async function dispatchEvent(
-  evt: NormalizedEvent,
-  env: Env,
-  leadId: string | null = null
+	evt: NormalizedEvent,
+	env: Env,
+	leadId: string | null = null
 ) {
-  const supabase = getSupabase(env);
+	const supabase = getSupabase( env );
 
-  const { data: existing } = await supabase
-    .from('events')
-    .select('id')
-    .eq('event_id', evt.eventId)
-    .maybeSingle();
+	const { data: existing } = await supabase
+		.from( 'events' )
+		.select( 'id' )
+		.eq( 'event_id', evt.eventId )
+		.maybeSingle();
 
-  if (existing) {
-    return { skipped: true, reason: 'already_processed' as const };
-  }
+	if ( existing ) {
+		return { skipped: true, reason: 'already_processed' as const };
+	}
 
-  const metaEvent = await buildMetaEvent(evt, env);
-  const ga4Event = await buildGa4Event(evt, env);
+	const metaEvent = await buildMetaEvent( evt, env );
+	const ga4Event = await buildGa4Event( evt, env );
 
-  const [metaResult, ga4Result] = await Promise.allSettled([
-    metaEvent ? postMetaEvents([metaEvent], env) : Promise.resolve({ skipped: true }),
-    ga4Event ? postGa4Event(ga4Event, env) : Promise.resolve({ skipped: true }),
-  ]);
+	const [ metaResult, ga4Result ] = await Promise.allSettled( [
+		metaEvent ? postMetaEvents( [ metaEvent ], env ) : Promise.resolve( { skipped: true } ),
+		ga4Event ? postGa4Event( ga4Event, env ) : Promise.resolve( { skipped: true } ),
+	] );
 
-  await supabase.from('events').insert({
-    event_id: evt.eventId,
-    event_name: evt.canonicalName,
-    lead_id: leadId,
-    meta_status: metaResult.status,
-    meta_response:
-      metaResult.status === 'fulfilled' ? metaResult.value : { error: String(metaResult.reason) },
-    ga4_status: ga4Result.status,
-    ga4_response:
-      ga4Result.status === 'fulfilled' ? ga4Result.value : { error: String(ga4Result.reason) },
-    raw_payload: evt.raw ?? evt,
-  });
+	await supabase.from( 'events' ).insert( {
+		event_id: evt.eventId,
+		event_name: evt.canonicalName,
+		lead_id: leadId,
+		meta_status: metaResult.status,
+		meta_response:
+			metaResult.status === 'fulfilled' ? metaResult.value : { error: String( metaResult.reason ) },
+		ga4_status: ga4Result.status,
+		ga4_response:
+			ga4Result.status === 'fulfilled' ? ga4Result.value : { error: String( ga4Result.reason ) },
+		raw_payload: evt.raw ?? evt,
+	} );
 
-  return { skipped: false as const, metaResult, ga4Result };
+	return { skipped: false as const, metaResult, ga4Result };
 }

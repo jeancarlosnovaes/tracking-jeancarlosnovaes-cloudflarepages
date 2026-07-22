@@ -14,11 +14,9 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 	const { request, env } = context;
 
 	let payload: any;
-	try
-	{
+	try {
 		payload = await request.json();
-	} catch
-	{
+	} catch {
 		return new Response( 'Invalid JSON', { status: 400 } );
 	}
 
@@ -28,14 +26,12 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 	const headerToken = request.headers.get( 'x-hotmart-hottok' );
 	const bodyToken = payload?.hottok;
 	const token = headerToken ?? bodyToken;
-	if ( !token || token !== env.HOTMART_HOTTOK )
-	{
+	if ( !token || token !== env.HOTMART_HOTTOK ) {
 		return new Response( 'Invalid hottok', { status: 401 } );
 	}
 
 	const canonicalName = mapHotmartEvent( payload.event );
-	if ( !canonicalName )
-	{
+	if ( !canonicalName ) {
 		// Evento que a Hotmart manda mas ainda não mapeamos (ver lib/hotmart.ts).
 		// Devolve 200 pra Hotmart não ficar reenviando, só loga pra decidir depois.
 		console.warn( 'Evento Hotmart não mapeado:', payload.event );
@@ -60,8 +56,7 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 	const lastName = restName.join( ' ' );
 
 	let leadId: string | null = null;
-	if ( parsed.buyerEmail )
-	{
+	if ( parsed.buyerEmail ) {
 		const supabase = getSupabase( env );
 		const { data: leadRow, error: leadError } = await supabase
 			.from( 'leads' )
@@ -87,11 +82,9 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 			.select( 'id' )
 			.single();
 
-		if ( leadError )
-		{
+		if ( leadError ) {
 			console.error( 'Erro ao gravar lead a partir do webhook Hotmart:', leadError.message );
-		} else
-		{
+		} else {
 			leadId = leadRow?.id ?? null;
 		}
 	}
@@ -107,7 +100,7 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 			phone: parsed.buyerPhone,
 			firstName: firstName || undefined,
 			lastName: lastName || undefined,
-			externalId: parsed.transactionId,
+			externalId: tracking?.external_id ?? parsed.transactionId,
 			internalId: leadId ?? undefined,
 			clientIp: tracking?.client_ip,
 			userAgent: tracking?.user_agent,
@@ -137,8 +130,7 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 
 	// Mantém uma visão comercial simples pro CRM/dashboard: uma linha por
 	// transação, sempre com o status mais recente (upsert por transaction_id)
-	if ( parsed.transactionId )
-	{
+	if ( parsed.transactionId ) {
 		const supabase = getSupabase( env );
 		await supabase.from( 'purchases' ).upsert(
 			{

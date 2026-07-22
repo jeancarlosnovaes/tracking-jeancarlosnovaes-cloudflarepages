@@ -7,13 +7,10 @@
 	// resolveria pro domínio ERRADO (o da página, não o do script).
 	var scriptOrigin = ( function () {
 		var current = document.currentScript;
-		if ( current && current.src )
-		{
-			try
-			{
+		if ( current && current.src ) {
+			try {
 				return new URL( current.src ).origin;
-			} catch ( e )
-			{
+			} catch ( e ) {
 				/* ignora e cai no fallback abaixo */
 			}
 		}
@@ -38,10 +35,20 @@
 		return parts.length >= 4 ? parts.slice( -2 ).join( '.' ) : null;
 	}
 
-	// Gerera um event_id único pra cada evento, que é necessário pra deduplicação
-	function generateEventId() {
-		return crypto.randomUUID();
+	// ID anônimo persistente (localStorage sobrevive entre visitas, ao
+	// contrário de um cookie de sessão). Vai em TODO evento como external_id
+	// — é o que dá continuidade entre PageView/Lead/InitiateCheckout e a
+	// Purchase que só chega bem depois pelo webhook da Hotmart, permitindo à
+	// Meta casar toda a jornada como a mesma pessoa (melhora o Event Match
+	// Quality mais do que só o ID da transação isolado).
+	function getOrCreateExternalId() {
+		var stored = localStorage.getItem( '_ext_id' );
+		if ( stored ) return stored;
+		var id = crypto.randomUUID();
+		localStorage.setItem( '_ext_id', id );
+		return id;
 	}
+	var externalId = getOrCreateExternalId();
 
 	// Persiste UTMs e clickids no primeiro acesso, mesmo que o usuário
 	// navegue por várias páginas antes de converter
@@ -72,11 +79,12 @@
 		const payload = Object.assign(
 			{
 				event_name: eventName,
-				event_id: data.event_id || generateEventId(),
+				event_id: crypto.randomUUID(),
 				source_url: window.location.href,
 				fbp: getCookie( '_fbp' ),
 				fbc: getCookie( '_fbc' ),
 				ga_client_id: getGaClientId(),
+				external_id: externalId,
 			},
 			ctx,
 			data.email ? { email: data.email } : {},
@@ -91,29 +99,39 @@
 		);
 
 		const body = JSON.stringify( payload );
-		if ( navigator.sendBeacon )
-		{
+		if ( navigator.sendBeacon ) {
 			navigator.sendBeacon( COLLECT_ENDPOINT, body );
-		} else
-		{
+		} else {
 			fetch( COLLECT_ENDPOINT, { method: 'POST', body, keepalive: true } );
 		}
 	};
 
-	const pageViewId = generateEventId();
-	const viewContentEventId = generateEventId();
-
-	// Inicializa o pixel do Meta (Facebook) com o ID do pixel
-	fbq( 'init', '1830724191002466' );
-
 	// Dispara PageView automático a cada carregamento
-	fbq( 'track', 'PageView', {}, { eventID: pageViewId } );
-	window.trackEvent( 'PageView', { event_id: pageViewId } );
+	window.trackEvent( 'PageView' );
 
 	// Dispara ViewContent também automaticamente. "product" aqui vira
 	// content_name (Meta) / item_name (GA4) — por padrão usa o <title> da
 	// página. Numa página de produto específica, prefira chamar de novo com
 	// o nome certo: trackEvent('ViewContent', { product: 'Nome do Produto' })
-	fbq( 'track', 'ViewContent', { content_name: document.title }, { eventID: viewContentEventId } );
-	window.trackEvent( 'ViewContent', { event_id: viewContentEventId, product: document.title } );
+	window.trackEvent( 'ViewContent', { product: document.title } );
+
+	// Monta o link do botão "Comprar". Use assim no site:
+	//   <a href="#" onclick="window.location.href = buildCheckoutUrl('https://pay.hotmart.com/XXXX'); return false;">Comprar</a>
+	//
+	// Por que não usar um href estático direto pro /api/checkout-redirect? Porque
+	// fbp/fbc são cookies do domínio do SITE (jeancarlosnovaes.com) — numa
+	// navegação normal pro domínio da API (fbapi.jeancarlosnovaes.com), o
+	// navegador NÃO manda cookies de um domínio pro outro. Lendo aqui (mesma
+	// origem da página) e mandando como query param, contorna isso.
+	window.buildCheckoutUrl = function ( hotmartCheckoutUrl ) {
+		const params = new URLSearchParams( { url: hotmartCheckoutUrl } );
+		params.set( 'fbp', getCookie( '_fbp' ) || '' );
+		params.set( 'fbc', getCookie( '_fbc' ) || '' );
+		params.set( 'ga_client_id', getGaClientId() || '' );
+		params.set( 'external_id', externalId );
+		Object.keys( ctx ).forEach( function ( key ) {
+			if ( ctx[ key ] ) params.set( key, ctx[ key ] );
+		} );
+		return COLLECT_ENDPOINT.replace( '/api/collect', '/api/checkout-redirect' ) + '?' + params.toString();
+	};
 } )();
