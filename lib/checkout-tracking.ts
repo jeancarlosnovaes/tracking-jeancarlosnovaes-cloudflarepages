@@ -35,7 +35,6 @@ export async function saveCheckoutTracking( ctx: CheckoutTrackingContext, env: E
 		utm_content: ctx.utmContent,
 	} );
 }
-
 // Chamado em functions/api/webhooks/hotmart.ts para recuperar o contexto
 // pelo código que voltou no payload do webhook (ver lib/hotmart.ts:extractTrackingCode)
 export async function getCheckoutTracking( code: string, env: Env ) {
