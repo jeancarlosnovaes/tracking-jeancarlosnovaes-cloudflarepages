@@ -32,6 +32,12 @@ export const onRequestGet: PagesFunction<Env> = async ( context ) => {
 		const parts = raw.split( '.' );
 		return parts.length >= 4 ? parts.slice( -2 ).join( '.' ) : null;
 	};
+	// Essa requisição é uma navegação de verdade do visitante (clicou em
+	// "Comprar"), então o cf aqui reflete a localização de quem está
+	// comprando — é o melhor momento pra capturar isso pra usar na Purchase.
+	const cf = ( request as any ).cf as
+		| { city?: string; region?: string; postalCode?: string; country?: string; }
+		| undefined;
 
 	// Prioriza os query params — é o que o track.js manda via buildCheckoutUrl(),
 	// lendo os cookies no navegador (mesma origem do site). O fallback pra
@@ -52,6 +58,10 @@ export const onRequestGet: PagesFunction<Env> = async ( context ) => {
 			utmCampaign: url.searchParams.get( 'utm_campaign' ),
 			utmTerm: url.searchParams.get( 'utm_term' ),
 			utmContent: url.searchParams.get( 'utm_content' ),
+			city: cf?.city,
+			state: cf?.region,
+			zip: cf?.postalCode,
+			countryIso: cf?.country,
 		},
 		env
 	);

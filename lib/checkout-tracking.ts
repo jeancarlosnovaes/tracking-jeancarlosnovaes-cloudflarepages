@@ -14,6 +14,10 @@ export interface CheckoutTrackingContext {
 	utmCampaign?: string | null;
 	utmTerm?: string | null;
 	utmContent?: string | null;
+	city?: string | null;
+	state?: string | null;
+	zip?: string | null;
+	countryIso?: string | null;
 }
 
 // Chamado em functions/api/checkout-redirect.ts, no momento em que o
@@ -33,8 +37,13 @@ export async function saveCheckoutTracking( ctx: CheckoutTrackingContext, env: E
 		utm_campaign: ctx.utmCampaign,
 		utm_term: ctx.utmTerm,
 		utm_content: ctx.utmContent,
+		city: ctx.city,
+		state: ctx.state,
+		zip: ctx.zip,
+		country_iso: ctx.countryIso,
 	} );
 }
+
 // Chamado em functions/api/webhooks/hotmart.ts para recuperar o contexto
 // pelo código que voltou no payload do webhook (ver lib/hotmart.ts:extractTrackingCode)
 export async function getCheckoutTracking( code: string, env: Env ) {

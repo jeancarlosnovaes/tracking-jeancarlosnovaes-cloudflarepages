@@ -107,10 +107,14 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 			fbp: tracking?.fbp,
 			fbc: tracking?.fbc,
 			gaClientId: tracking?.ga_client_id,
-			city: parsed.buyerCity,
-			state: parsed.buyerState,
-			zip: parsed.buyerZip,
-			countryIso: parsed.buyerCountryIso,
+			// Prioriza o endereço real declarado na Hotmart (quando o produto
+			// coleta isso); se não vier, usa a geolocalização por IP capturada
+			// no momento do clique em "Comprar" (ver checkout-redirect.ts) —
+			// aproximada, mas cobre 100% das compras, não só as com endereço.
+			city: parsed.buyerCity ?? tracking?.city,
+			state: parsed.buyerState ?? tracking?.state,
+			zip: parsed.buyerZip ?? tracking?.zip,
+			countryIso: parsed.buyerCountryIso ?? tracking?.country_iso,
 			street: parsed.buyerStreet,
 		},
 		commerce: {

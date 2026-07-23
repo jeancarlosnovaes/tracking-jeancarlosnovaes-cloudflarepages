@@ -67,6 +67,11 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 
 	const clientIp = request.headers.get( 'cf-connecting-ip' ) ?? '';
 	const userAgent = request.headers.get( 'user-agent' ) ?? '';
+	// Populado automaticamente pela Cloudflare em toda requisição, sem
+	// configuração nenhuma — geolocalização aproximada pelo IP do visitante.
+	const cf = ( request as any ).cf as
+		| { city?: string; region?: string; postalCode?: string; country?: string; }
+		| undefined;
 
 	// 1. Grava/atualiza o lead no Supabase (CRM)
 	let leadId: string | null = null;
@@ -128,6 +133,10 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 			fbp: payload.fbp,
 			fbc: payload.fbc,
 			gaClientId: payload.ga_client_id,
+			city: cf?.city,
+			state: cf?.region,
+			zip: cf?.postalCode,
+			countryIso: cf?.country,
 		},
 		commerce:
 			payload.value !== undefined || payload.product
