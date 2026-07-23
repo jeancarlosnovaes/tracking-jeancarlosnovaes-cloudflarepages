@@ -39,13 +39,31 @@ export async function dispatchEvent(
 		ga4Event ? postGa4Event( ga4Event, env ) : Promise.resolve( { skipped: true } ),
 	] );
 
+	if ( env.DEBUG_LOG === 'true' ) {
+		console.log(
+			`[dispatchEvent] ${evt.canonicalName} (${evt.eventId})`,
+			JSON.stringify(
+				{
+					meta_request: metaEvent,
+					meta_result: metaResult.status === 'fulfilled' ? metaResult.value : String( metaResult.reason ),
+					ga4_request: ga4Event,
+					ga4_result: ga4Result.status === 'fulfilled' ? ga4Result.value : String( ga4Result.reason ),
+				},
+				null,
+				2
+			)
+		);
+	}
+
 	await supabase.from( 'events' ).insert( {
 		event_id: evt.eventId,
 		event_name: evt.canonicalName,
 		lead_id: leadId,
+		meta_request: metaEvent,
 		meta_status: metaResult.status,
 		meta_response:
 			metaResult.status === 'fulfilled' ? metaResult.value : { error: String( metaResult.reason ) },
+		ga4_request: ga4Event,
 		ga4_status: ga4Result.status,
 		ga4_response:
 			ga4Result.status === 'fulfilled' ? ga4Result.value : { error: String( ga4Result.reason ) },

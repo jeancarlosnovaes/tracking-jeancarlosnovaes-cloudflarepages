@@ -25,16 +25,19 @@ export interface Ga4Payload {
 
 // Só envia — a formatação fica em lib/format-ga4.ts
 export async function postGa4Event( payload: Ga4Payload, env: Env ) {
+	// Endpoint de produção responde 204 sem corpo — não dá pra saber se o
+	// payload tinha algum erro de formatação. O de validação NÃO registra o
+	// evento de verdade, mas devolve validationMessages com o problema exato.
+	const base = env.GA4_DEBUG === 'true' ? 'debug/mp/collect' : 'mp/collect';
+
 	const res = await fetch(
-		`https://www.google-analytics.com/mp/collect?measurement_id=${env.GA4_MEASUREMENT_ID}&api_secret=${env.GA4_API_SECRET}`,
+		`https://www.google-analytics.com/${base}?measurement_id=${env.GA4_MEASUREMENT_ID}&api_secret=${env.GA4_API_SECRET}`,
 		{
 			method: 'POST',
 			body: JSON.stringify( payload ),
 		}
 	);
 
-	// Produção responde 204 sem corpo. Para depurar payloads, troque a URL
-	// acima por www.google-analytics.com/debug/mp/collect temporariamente —
-	// ela retorna um JSON com os erros de validação do payload.
-	return { ok: res.ok, status: res.status };
+	const body = env.GA4_DEBUG === 'true' ? await res.json().catch( () => null ) : null;
+	return { ok: res.ok, status: res.status, ...( body ? { validation: body } : {} ) };
 }

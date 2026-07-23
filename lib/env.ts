@@ -11,6 +11,13 @@ export interface Env {
 	META_TEST_EVENT_CODE?: string;
 	GA4_MEASUREMENT_ID: string;
 	GA4_API_SECRET: string;
+	// "true" troca o endpoint de produção pelo de validação (/debug/mp/collect)
+	// — o evento NÃO é registrado no GA4, mas a resposta traz os erros
+	// exatos do payload em validationMessages. Deixe sem definir em produção.
+	GA4_DEBUG?: string;
 	HOTMART_HOTTOK: string;
+	// "true" imprime no console o JSON exato enviado e a resposta de cada
+	// plataforma, pra debug local (wrangler dev) ou via `wrangler tail` em produção
+	DEBUG_LOG?: string;
 	DEFAULT_PHONE_COUNTRY_CODE?: string;
 }
