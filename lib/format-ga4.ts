@@ -28,16 +28,14 @@ export async function buildGa4Event( evt: NormalizedEvent, env: Env ): Promise<G
 		engagement_time_msec: 1,
 	};
 
-	if ( evt.commerce )
-	{
+	if ( evt.commerce ) {
 		if ( evt.commerce.currency ) params.currency = evt.commerce.currency;
 		if ( evt.commerce.value !== undefined ) params.value = evt.commerce.value;
 		if ( evt.commerce.transactionId ) params.transaction_id = evt.commerce.transactionId;
 		if ( evt.commerce.paymentMethod ) params.payment_type = evt.commerce.paymentMethod;
 		if ( evt.commerce.coupon ) params.coupon = evt.commerce.coupon; // sem equivalente na Meta
 
-		if ( evt.commerce.productId || evt.commerce.productName )
-		{
+		if ( evt.commerce.productId || evt.commerce.productName ) {
 			params.items = [
 				{
 					item_id: evt.commerce.productId ?? evt.commerce.productName,
@@ -70,41 +68,34 @@ export async function buildGa4Event( evt: NormalizedEvent, env: Env ): Promise<G
 		evt.user.state || evt.user.zip || evt.user.countryIso
 	);
 
-	if ( evt.user.internalId && ( evt.user.email || evt.user.phone || hasAddressData ) )
-	{
+	if ( evt.user.internalId && ( evt.user.email || evt.user.phone || hasAddressData ) ) {
 		payload.user_id = evt.user.internalId;
 		payload.user_data = {};
 
-		if ( evt.user.email )
-		{
+		if ( evt.user.email ) {
 			payload.user_data.sha256_email_address = await sha256Hex(
 				normalizeEmailForGa4( evt.user.email )
 			);
 		}
-		if ( evt.user.phone )
-		{
+		if ( evt.user.phone ) {
 			payload.user_data.sha256_phone_number = await sha256Hex(
 				normalizePhoneForGa4( evt.user.phone, countryCode )
 			);
 		}
 
-		if ( hasAddressData )
-		{
+		if ( hasAddressData ) {
 			payload.user_data.address = {};
-			if ( evt.user.firstName )
-			{
+			if ( evt.user.firstName ) {
 				payload.user_data.address.sha256_first_name = await sha256Hex(
 					normalizeNameForGa4( evt.user.firstName )
 				);
 			}
-			if ( evt.user.lastName )
-			{
+			if ( evt.user.lastName ) {
 				payload.user_data.address.sha256_last_name = await sha256Hex(
 					normalizeNameForGa4( evt.user.lastName )
 				);
 			}
-			if ( evt.user.street )
-			{
+			if ( evt.user.street ) {
 				payload.user_data.address.sha256_street = await sha256Hex(
 					normalizeStreetForGa4( evt.user.street )
 				);
@@ -112,16 +103,13 @@ export async function buildGa4Event( evt: NormalizedEvent, env: Env ): Promise<G
 			// city, region, postal_code e country NÃO são hasheados — vão em
 			// texto puro no payload, ao contrário dos campos acima
 			if ( evt.user.city ) payload.user_data.address.city = normalizeCityForGa4( evt.user.city );
-			if ( evt.user.state )
-			{
+			if ( evt.user.state ) {
 				payload.user_data.address.region = normalizeRegionForGa4( evt.user.state );
 			}
-			if ( evt.user.zip )
-			{
+			if ( evt.user.zip ) {
 				payload.user_data.address.postal_code = normalizePostalCodeForGa4( evt.user.zip );
 			}
-			if ( evt.user.countryIso )
-			{
+			if ( evt.user.countryIso ) {
 				payload.user_data.address.country = normalizeCountryForGa4( evt.user.countryIso );
 			}
 		}
