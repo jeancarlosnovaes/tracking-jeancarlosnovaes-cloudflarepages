@@ -12,6 +12,7 @@
 				return new URL( current.src ).origin;
 			} catch ( e ) {
 				/* ignora e cai no fallback abaixo */
+				console.log( '[tracking] erro ao ler origem do script, usando window.location.origin', e );
 			}
 		}
 		return window.location.origin;
