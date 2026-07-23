@@ -116,14 +116,31 @@
 			} );
 	};
 
-	// Dispara PageView automático a cada carregamento
-	window.trackEvent( 'PageView' );
+	// Gera um event_id aleatório pra cada evento, que é enviado tanto pro
+	// Meta quanto pro GA4. Isso permite que a Meta case eventos de PageView,
+	// Lead, InitiateCheckout e Purchase como sendo da mesma pessoa, mesmo que
+	// o Purchase só chegue depois pelo webhook da Hotmart.
+	function generateEventId() {
+		return crypto.randomUUID();
+	}
+	const pageViewId = generateEventId();
+	const viewContentEventId = generateEventId();
 
 	// Dispara ViewContent também automaticamente. "product" aqui vira
 	// content_name (Meta) / item_name (GA4) — por padrão usa o <title> da
 	// página. Numa página de produto específica, prefira chamar de novo com
 	// o nome certo: trackEvent('ViewContent', { product: 'Nome do Produto' })
-	window.trackEvent( 'ViewContent', { product: document.title } );
+
+	// Dispara PageView automático a cada carregamento
+	window.trackEvent( 'PageView', { event_id: pageViewId } );
+	fbq( 'track', 'PageView', {}, { eventID: pageViewId } );
+
+	// Dispara ViewContent também automaticamente. "product" aqui vira
+	// content_name (Meta) / item_name (GA4) — por padrão usa o <title> da
+	// página. Numa página de produto específica, prefira chamar de novo com
+	// o nome certo: trackEvent('ViewContent', { product: 'Nome do Produto' })
+	window.trackEvent( 'ViewContent', { event_id: viewContentEventId, product: document.title } );
+	fbq( 'track', 'ViewContent', { content_name: document.title }, { eventID: viewContentEventId } );
 
 	// Monta o link do botão "Comprar". Use assim no site:
 	//   <a href="#" onclick="window.location.href = buildCheckoutUrl('https://pay.hotmart.com/XXXX'); return false;">Comprar</a>
