@@ -12,7 +12,6 @@
 				return new URL( current.src ).origin;
 			} catch ( e ) {
 				/* ignora e cai no fallback abaixo */
-				console.log( '[tracking] erro ao ler origem do script, usando window.location.origin', e );
 			}
 		}
 		return window.location.origin;
@@ -66,9 +65,20 @@
 	localStorage.setItem( '_track_ctx', JSON.stringify( ctx ) );
 
 	// API pública: chame em qualquer lugar do site
-	// trackEvent('Purchase', { email, phone, name, product, value: 197, currency: 'BRL' })
+	// trackEvent('Lead', { email, phone, name, product, value: 197, currency: 'BRL' })
+	//
+	// Se o Pixel base da Meta estiver carregado (window.fbq existir), o
+	// trackEvent JÁ dispara os dois lados sozinho — browser (fbq) e servidor
+	// (CAPI) — com o MESMO event_id, que é como a Meta deduplica (conta como
+	// 1 evento, não 2). Você não precisa chamar fbq() manualmente; só garanta
+	// que o snippet base do Pixel (o que carrega fbevents.js) e o
+	// fbq('init', 'SEU_PIXEL_ID') rodem ANTES deste script.
 	//
 	// Campos aceitos em `data` (todos opcionais, use o que fizer sentido pro evento):
+	//   event_id                  -> normalmente não precisa passar; o
+	//                                trackEvent já gera um e usa o mesmo pro
+	//                                fbq() e pro servidor. Só passe o seu se
+	//                                precisar controlar isso de fora.
 	//   email, phone, name        -> viram user_data hasheado (Meta) / user_data (GA4)
 	//   product                   -> content_name (Meta) / item_name (GA4)
 	//   value, currency           -> value/currency nos dois
@@ -77,10 +87,27 @@
 	//   quantity                  -> num_items/contents[].quantity (Meta) / items[].quantity (GA4)
 	window.trackEvent = function ( eventName, data ) {
 		data = data || {};
+		const eventId = data.event_id || crypto.randomUUID();
+
+		// Dispara pelo Pixel do navegador também, se ele existir — com o MESMO
+		// eventId que vai pro servidor logo abaixo. Assume que eventName é um
+		// evento padrão da Meta (PageView, ViewContent, Lead, InitiateCheckout,
+		// AddPaymentInfo — os únicos que este script dispara pelo navegador;
+		// Purchase/Refund/etc. vêm só do webhook da Hotmart, nunca daqui). Pra
+		// um evento realmente customizado, troque para fbq('trackCustom', ...).
+		if ( typeof window.fbq === 'function' ) {
+			const fbqData = {};
+			if ( data.product ) fbqData.content_name = data.product;
+			if ( data.category ) fbqData.content_category = data.category;
+			if ( data.value !== undefined ) fbqData.value = data.value;
+			if ( data.currency ) fbqData.currency = data.currency;
+			window.fbq( 'track', eventName, fbqData, { eventID: eventId } );
+		}
+
 		const payload = Object.assign(
 			{
 				event_name: eventName,
-				event_id: crypto.randomUUID(),
+				event_id: eventId,
 				source_url: window.location.href,
 				fbp: getCookie( '_fbp' ),
 				fbc: getCookie( '_fbc' ),
@@ -117,35 +144,10 @@
 			} );
 	};
 
-	// Gera um event_id aleatório pra cada evento, que é enviado tanto pro
-	// Meta quanto pro GA4. Isso permite que a Meta case eventos de PageView,
-	// Lead, InitiateCheckout e Purchase como sendo da mesma pessoa, mesmo que
-	// o Purchase só chegue depois pelo webhook da Hotmart.
-	function generateEventId() {
-		return crypto.randomUUID();
-	}
-
-	const pageViewId = generateEventId();
-	const viewContentEventId = generateEventId();
-
-	// Inicializa o pixel da Meta (Facebook) — precisa estar antes do trackEvent('PageView')
-	fbq( 'init', '1830724191002466' );
-
-	// Dispara ViewContent também automaticamente. "product" aqui vira
-	// content_name (Meta) / item_name (GA4) — por padrão usa o <title> da
-	// página. Numa página de produto específica, prefira chamar de novo com
-	// o nome certo: trackEvent('ViewContent', { product: 'Nome do Produto' })
-
-	// Dispara PageView automático a cada carregamento
-	window.trackEvent( 'PageView', { event_id: pageViewId } );
-	fbq( 'track', 'PageView', {}, { eventID: pageViewId } );
-
-	// Dispara ViewContent também automaticamente. "product" aqui vira
-	// content_name (Meta) / item_name (GA4) — por padrão usa o <title> da
-	// página. Numa página de produto específica, prefira chamar de novo com
-	// o nome certo: trackEvent('ViewContent', { product: 'Nome do Produto' })
-	window.trackEvent( 'ViewContent', { event_id: viewContentEventId, product: document.title } );
-	fbq( 'track', 'ViewContent', { content_name: document.title }, { eventID: viewContentEventId } );
+	// Dispara PageView e ViewContent automáticos a cada carregamento — já
+	// cobrindo browser (fbq, se existir) e servidor com o event_id sincronizado.
+	window.trackEvent( 'PageView' );
+	window.trackEvent( 'ViewContent', { product: document.title } );
 
 	// Monta o link do botão "Comprar". Use assim no site:
 	//   <a href="#" onclick="window.location.href = buildCheckoutUrl('https://pay.hotmart.com/XXXX'); return false;">Comprar</a>
