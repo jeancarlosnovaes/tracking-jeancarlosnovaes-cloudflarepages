@@ -123,8 +123,12 @@
 	function generateEventId() {
 		return crypto.randomUUID();
 	}
+
 	const pageViewId = generateEventId();
 	const viewContentEventId = generateEventId();
+
+	// Inicializa o pixel da Meta (Facebook) — precisa estar antes do trackEvent('PageView')
+	fbq( 'init', '1830724191002466' );
 
 	// Dispara ViewContent também automaticamente. "product" aqui vira
 	// content_name (Meta) / item_name (GA4) — por padrão usa o <title> da
