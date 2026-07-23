@@ -9,7 +9,7 @@
 //   fn/ln: minúsculas, sem pontuação, mas MANTÉM acentos/não-latinos
 //          (o próprio exemplo da Meta normaliza "Valéry" -> "valéry")
 //   ct/st/zp/country: minúsculas, sem pontuação
-
+//   zp: nos EUA, só os 5 primeiros dígitos
 // GA4: https://developers.google.com/analytics/devguides/collection/ga4/uid-data
 //   email: minúsculas + remove espaços + remove pontos antes de @ em
 //          gmail.com/googlemail.com
