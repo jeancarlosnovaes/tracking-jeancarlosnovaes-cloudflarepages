@@ -39,36 +39,51 @@ export async function dispatchEvent(
 		ga4Event ? postGa4Event( ga4Event, env ) : Promise.resolve( { skipped: true } ),
 	] );
 
-	if ( env.DEBUG_LOG === 'true' ) {
-		console.log(
-			`[dispatchEvent] ${evt.canonicalName} (${evt.eventId})`,
-			JSON.stringify(
-				{
-					meta_request: metaEvent,
-					meta_result: metaResult.status === 'fulfilled' ? metaResult.value : String( metaResult.reason ),
-					ga4_request: ga4Event,
-					ga4_result: ga4Result.status === 'fulfilled' ? ga4Result.value : String( ga4Result.reason ),
-				},
-				null,
-				2
-			)
-		);
+	const debugEnabled = env.DEBUG_LOG?.toLowerCase() === 'true' || env.DEBUG_LOG === '1';
+
+	const metaResultValue = metaResult.status === 'fulfilled' ? metaResult.value : { error: String( metaResult.reason ) };
+	const ga4ResultValue = ga4Result.status === 'fulfilled' ? ga4Result.value : { error: String( ga4Result.reason ) };
+
+	if ( debugEnabled ) {
+		const debugPayload = {
+			event_name: evt.canonicalName,
+			event_id: evt.eventId,
+			meta_request: metaEvent,
+			meta_result: metaResultValue,
+			ga4_request: ga4Event,
+			ga4_result: ga4ResultValue,
+		};
+		// Log do lado do servidor — só visível via `wrangler tail` ou dashboard
+		console.log( `[dispatchEvent] ${evt.canonicalName} (${evt.eventId})`, JSON.stringify( debugPayload, null, 2 ) );
+
+		await supabase.from( 'events' ).insert( {
+			event_id: evt.eventId,
+			event_name: evt.canonicalName,
+			lead_id: leadId,
+			meta_request: metaEvent,
+			meta_status: metaResult.status,
+			meta_response: metaResultValue,
+			ga4_request: ga4Event,
+			ga4_status: ga4Result.status,
+			ga4_response: ga4ResultValue,
+			raw_payload: evt.raw ?? evt,
+		} );
+
+		// Devolvido na resposta HTTP pra quem chamou (ex: track.js) poder
+		// imprimir no console DO NAVEGADOR — é isso que aparece lá.
+		return { skipped: false as const, debug: debugPayload };
 	}
 
 	await supabase.from( 'events' ).insert( {
 		event_id: evt.eventId,
 		event_name: evt.canonicalName,
 		lead_id: leadId,
-		meta_request: metaEvent,
 		meta_status: metaResult.status,
-		meta_response:
-			metaResult.status === 'fulfilled' ? metaResult.value : { error: String( metaResult.reason ) },
-		ga4_request: ga4Event,
+		meta_response: metaResultValue,
 		ga4_status: ga4Result.status,
-		ga4_response:
-			ga4Result.status === 'fulfilled' ? ga4Result.value : { error: String( ga4Result.reason ) },
+		ga4_response: ga4ResultValue,
 		raw_payload: evt.raw ?? evt,
 	} );
 
-	return { skipped: false as const, metaResult, ga4Result };
+	return { skipped: false as const };
 }

@@ -99,11 +99,21 @@
 		);
 
 		const body = JSON.stringify( payload );
-		if ( navigator.sendBeacon ) {
-			navigator.sendBeacon( COLLECT_ENDPOINT, body );
-		} else {
-			fetch( COLLECT_ENDPOINT, { method: 'POST', body, keepalive: true } );
-		}
+		// sendBeacon é "fire and forget" — não dá pra ler a resposta, então não
+		// dava pra mostrar o debug no console. Com DEBUG_LOG=true no servidor,
+		// a resposta traz o payload exato enviado pra Meta/GA4 e aparece aqui.
+		fetch( COLLECT_ENDPOINT, { method: 'POST', body, keepalive: true } )
+			.then( function ( res ) {
+				return res.json();
+			} )
+			.then( function ( data ) {
+				if ( data && data.debug ) {
+					console.log( '[tracking] ' + eventName, data.debug );
+				}
+			} )
+			.catch( function () {
+				/* nunca quebra a página por causa de tracking */
+			} );
 	};
 
 	// Dispara PageView automático a cada carregamento
