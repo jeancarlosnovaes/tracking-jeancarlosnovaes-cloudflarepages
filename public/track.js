@@ -104,6 +104,7 @@
 			window.fbq( 'track', eventName, fbqData, { eventID: eventId } );
 		}
 
+		// Dispara pro servidor (CAPI + GA4) com o mesmo eventId, pra Meta deduplicar
 		const payload = Object.assign(
 			{
 				event_name: eventName,
@@ -126,6 +127,7 @@
 			data.quantity !== undefined ? { quantity: data.quantity } : {}
 		);
 
+		// fetch() com keepalive=true é o substituto moderno do navigator.sendBeacon()
 		const body = JSON.stringify( payload );
 		// sendBeacon é "fire and forget" — não dá pra ler a resposta, então não
 		// dava pra mostrar o debug no console. Com DEBUG_LOG=true no servidor,
