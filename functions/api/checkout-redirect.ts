@@ -13,15 +13,27 @@ function isAllowedRedirectHost( hostname: string ): boolean {
 	return ALLOWED_REDIRECT_HOSTS.some( ( pattern ) => pattern.test( hostname ) );
 }
 
-// Troque o link "Comprar" do seu site de:
-//   https://pay.hotmart.com/XXXXXXXX
-// para:
-//   https://fbapi.seudominio.com/api/checkout-redirect?url=https://pay.hotmart.com/XXXXXXXX
+// Troque o link "Comprar" do seu site por algo que use buildCheckoutUrl()
+// (definido em public/track.js), NÃO um href estático apontando direto
+// pra cá — veja por quê:
 //
-// Isso grava fbp/fbc/ga_client_id/UTMs num registro com um código único,
-// anexa esse código como ?sck= no link da Hotmart, e redireciona. Quando o
-// webhook da compra chegar, esse mesmo código volta no payload e permite
-// recuperar o contexto do clique (ver lib/hotmart.ts:extractTrackingCode).
+//   <a href="#" onclick="window.location.href = buildCheckoutUrl('https://pay.hotmart.com/XXXXXXXX'); return false;">
+//     Comprar
+//   </a>
+//
+// Por quê não um href estático tipo
+// "https://fbapi.seudominio.com/api/checkout-redirect?url=..."? Porque
+// fbp/fbc são cookies do domínio do SITE — numa navegação normal pro
+// domínio da API (se forem domínios diferentes, ex: fbapi.jeancarlosnovaes.com
+// vs jeancarlosnovaes.com), o navegador NÃO manda esses cookies. O
+// buildCheckoutUrl() lê tudo no navegador (mesma origem da página) e manda
+// como query param, contornando isso.
+//
+// O que essa rota faz: grava fbp/fbc/ga_client_id/external_id/UTMs num
+// registro com um código único, anexa esse código como ?sck= no link da
+// Hotmart, e redireciona. Quando o webhook da compra chegar, esse mesmo
+// código volta no payload e permite recuperar o contexto do clique (ver
+// lib/hotmart.ts:extractTrackingCode).
 export const onRequestGet: PagesFunction<Env> = async ( context ) => {
 	const { request, env } = context;
 	const url = new URL( request.url );
