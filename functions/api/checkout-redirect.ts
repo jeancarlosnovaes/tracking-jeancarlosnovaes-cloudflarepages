@@ -2,6 +2,17 @@ import type { PagesFunction } from '@cloudflare/workers-types';
 import { saveCheckoutTracking } from '../../lib/checkout-tracking';
 import type { Env } from '../../lib/env';
 
+// Segurança: sem essa checagem, qualquer um poderia montar
+// /api/checkout-redirect?url=https://site-malicioso.com e usar o SEU
+// domínio de confiança pra disfarçar um link de phishing (open redirect).
+// Só deixa redirecionar pra domínios da Hotmart. Se você usar um checkout
+// customizado (domínio próprio configurado na Hotmart), adicione aqui.
+const ALLOWED_REDIRECT_HOSTS = [ /(^|\.)hotmart\.com$/ ];
+
+function isAllowedRedirectHost( hostname: string ): boolean {
+	return ALLOWED_REDIRECT_HOSTS.some( ( pattern ) => pattern.test( hostname ) );
+}
+
 // Troque o link "Comprar" do seu site de:
 //   https://pay.hotmart.com/XXXXXXXX
 // para:
@@ -17,6 +28,17 @@ export const onRequestGet: PagesFunction<Env> = async ( context ) => {
 	const checkoutUrl = url.searchParams.get( 'url' );
 	if ( !checkoutUrl ) {
 		return new Response( 'Missing url param', { status: 400 } );
+	}
+
+	let destination: URL;
+	try {
+		destination = new URL( checkoutUrl );
+	} catch {
+		return new Response( 'Invalid url param', { status: 400 } );
+	}
+
+	if ( !isAllowedRedirectHost( destination.hostname ) ) {
+		return new Response( 'Redirect target not allowed', { status: 400 } );
 	}
 
 	const code = crypto.randomUUID();
@@ -66,12 +88,6 @@ export const onRequestGet: PagesFunction<Env> = async ( context ) => {
 		env
 	);
 
-	let destination: URL;
-	try {
-		destination = new URL( checkoutUrl );
-	} catch {
-		return new Response( 'Invalid url param', { status: 400 } );
-	}
 	destination.searchParams.set( 'sck', code );
 
 	return Response.redirect( destination.toString(), 302 );

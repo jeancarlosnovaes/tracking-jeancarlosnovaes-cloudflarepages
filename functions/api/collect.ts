@@ -2,7 +2,7 @@ import type { PagesFunction } from '@cloudflare/workers-types';
 import { getSupabase } from '../../lib/supabase';
 import { dispatchEvent } from '../../lib/dispatch-event';
 import type { NormalizedEvent } from '../../lib/normalized-event';
-import type { CanonicalEventName } from '../../lib/event-catalog';
+import { EVENT_CATALOG, type CanonicalEventName } from '../../lib/event-catalog';
 import type { Env } from '../../lib/env';
 
 // site principal (jeancarlosnovaes.com) chamando a API num subdomínio
@@ -58,11 +58,17 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 		return new Response( 'Invalid JSON', { status: 400, headers: CORS_HEADERS } );
 	}
 
-	if ( !payload.event_name || !payload.event_id ) {
-		return new Response( 'Missing event_name or event_id', {
+	if ( !payload.event_name || !payload.event_id || !payload.source_url ) {
+		return new Response( 'Missing event_name, event_id or source_url', {
 			status: 400,
 			headers: CORS_HEADERS,
 		} );
+	}
+
+	// Sem isso, um event_name que não existe no catálogo derruba o resto do
+	// código com um erro não tratado (EVENT_CATALOG[nome] vem undefined).
+	if ( !( payload.event_name in EVENT_CATALOG ) ) {
+		return new Response( 'Unknown event_name', { status: 400, headers: CORS_HEADERS } );
 	}
 
 	const clientIp = request.headers.get( 'cf-connecting-ip' ) ?? '';

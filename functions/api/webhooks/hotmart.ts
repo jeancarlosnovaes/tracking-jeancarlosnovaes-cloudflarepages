@@ -6,6 +6,19 @@ import { getCheckoutTracking } from '../../../lib/checkout-tracking';
 import type { NormalizedEvent } from '../../../lib/normalized-event';
 import type { Env } from '../../../lib/env';
 
+// Comparação em tempo constante — uma comparação normal (===) sai mais
+// rápido quanto mais cedo os caracteres divergem, o que teoricamente
+// vaza informação sobre o token via tempo de resposta. Aqui sempre
+// percorre a string inteira, independente de onde ela diverge.
+function timingSafeEqual( a: string, b: string ): boolean {
+	if ( a.length !== b.length ) return false;
+	let result = 0;
+	for ( let i = 0; i < a.length; i++ ) {
+		result |= a.charCodeAt( i ) ^ b.charCodeAt( i );
+	}
+	return result === 0;
+}
+
 // Cadastre https://fbapi.seudominio.com/api/webhooks/hotmart em Hotmart >
 // Ferramentas > Webhook (API e notificações) > + Cadastrar Webhook,
 // versão 2.0.0, marcando todos os eventos de compra/assinatura/membros
@@ -26,7 +39,7 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 	const headerToken = request.headers.get( 'x-hotmart-hottok' );
 	const bodyToken = payload?.hottok;
 	const token = headerToken ?? bodyToken;
-	if ( !token || token !== env.HOTMART_HOTTOK ) {
+	if ( !token || !timingSafeEqual( token, env.HOTMART_HOTTOK ) ) {
 		return new Response( 'Invalid hottok', { status: 401 } );
 	}
 
