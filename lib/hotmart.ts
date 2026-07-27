@@ -51,6 +51,8 @@ export interface ParsedHotmartData {
 	subscriptionId?: string;
 	buyerEmail?: string;
 	buyerName?: string;
+	buyerFirstName?: string;
+	buyerLastName?: string;
 	buyerPhone?: string;
 	buyerCity?: string;
 	buyerState?: string;
@@ -77,14 +79,20 @@ export function parseHotmartData( data: any, fallbackTimeMs: number ): ParsedHot
 		subscriptionId: data?.subscription?.subscriber?.code,
 		buyerEmail: data?.buyer?.email,
 		buyerName: data?.buyer?.name,
+		// A Hotmart já manda first_name/last_name prontos — usar isso em vez de
+		// quebrar buyer.name manualmente (mais confiável com nomes compostos)
+		buyerFirstName: data?.buyer?.first_name,
+		buyerLastName: data?.buyer?.last_name,
 		buyerPhone: data?.buyer?.checkout_phone ?? data?.buyer?.phone,
-		// Endereço nem sempre vem (depende do produto/checkout) — a Meta e o
-		// GA4 recomendam mandar sempre que existir, mesmo que incompleto.
-		buyerCity: addr?.city,
-		buyerState: addr?.state,
-		buyerZip: addr?.zip_code ?? addr?.zipcode,
+		// Endereço nem sempre vem preenchido (depende do produto/checkout) — a
+		// Meta e o GA4 recomendam mandar sempre que existir, mesmo que incompleto.
+		// Tratamos string vazia como "não veio" (comum a Hotmart mandar "" em
+		// vez de omitir o campo).
+		buyerCity: addr?.city || undefined,
+		buyerState: addr?.state || undefined,
+		buyerZip: ( addr?.zip_code ?? addr?.zipcode ) || undefined,
 		buyerCountryIso: data?.purchase?.checkout_country?.iso ?? addr?.country_iso,
-		buyerStreet: street,
+		buyerStreet: street || undefined,
 		// ⚠️ Path não confirmado na doc pública da Hotmart — se o seu checkout
 		// usa cupons, confira o payload de teste e ajuste se vier em outro lugar.
 		coupon: data?.purchase?.offer?.coupon_code ?? data?.purchase?.offer?.coupon,

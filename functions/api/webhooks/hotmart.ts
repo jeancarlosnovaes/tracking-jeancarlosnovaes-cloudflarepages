@@ -65,8 +65,11 @@ export const onRequestPost: PagesFunction<Env> = async ( context ) => {
 	const dedupKey = parsed.transactionId ?? payload.id;
 	const eventId = `hotmart_${dedupKey}_${canonicalName}`;
 
-	const [ firstName, ...restName ] = ( parsed.buyerName ?? '' ).split( ' ' ).filter( Boolean );
-	const lastName = restName.join( ' ' );
+	// Preferimos os campos já prontos da Hotmart — mais confiáveis que quebrar
+	// buyer.name manualmente (ex: sobrenomes compostos não batem igual)
+	const [ splitFirstName, ...splitRestName ] = ( parsed.buyerName ?? '' ).split( ' ' ).filter( Boolean );
+	const firstName = parsed.buyerFirstName || splitFirstName;
+	const lastName = parsed.buyerLastName || splitRestName.join( ' ' );
 
 	let leadId: string | null = null;
 	if ( parsed.buyerEmail ) {
